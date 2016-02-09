@@ -1,0 +1,111 @@
+---
+title: 'PS#2: Diving into real data using Sklar et al. (2012)'
+author: "Mike Frank"
+date: "February 9, 2016"
+output: 
+  html_document:
+    toc: true
+---
+
+# Intro
+
+This is problem set #2, in which we hope you will practice the visualization package `ggplot2`, as well as hone your knowledge of the packages `tidyr` and `dplyr`. 
+
+Sklar et al. (2012) claims evidence for unconscious arithmetic processing. We're going to do a reanalysis of their Experiment 6, which is the primary piece of evidence for that claim. The data  are generously contributed by Asael Sklar. 
+
+First let's set up a few preliminaries. 
+
+```{r}
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+library(lme4)
+
+sem <- function(x) {sd(x, na.rm=TRUE) / sqrt(length(x))}
+ci95 <- function(x) {sem(x) * 1.96}
+```
+
+# Data Prep
+
+First read in two data files and subject info. A and B refer to different trial order counterbalances. 
+
+```{r}
+subinfo <- read.csv("http://langcog.stanford.edu/sklar_expt6_subinfo_corrected.csv")
+d.a <- read.csv("http://langcog.stanford.edu/sklar_expt6a_corrected.csv")
+d.b <- read.csv("http://langcog.stanford.edu/sklar_expt6b_corrected.csv")
+```
+
+Gather these datasets into long form and get rid of the Xs in the headers.
+
+```{r}
+```
+
+Bind these together. Check out `bind_rows`.
+
+```{r}
+```
+
+Merge these with subject info. You will need to look into merge and its relatives, `left_` and `right_join`. Call this dataframe `d`, by convention. 
+
+```{r}
+```
+
+Clean up the factor structure.
+
+```{r}
+d$presentation.time <- factor(d$presentation.time)
+levels(d$operand) <- c("addition","subtraction")
+```
+
+# Data Analysis Preliminaries
+
+Examine the basic properties of the dataset. First, take a histogram.
+
+```{r}
+```
+
+Challenge question: what is the sample rate of the input device they are using to gather RTs?
+
+Sklar et al. did two manipulation checks. Subjective - asking participants whether they saw the primes - and objective - asking them to report the parity of the primes (even or odd) to find out if they could actually read the primes when they tried. Examine both the unconscious and conscious manipulation checks. What do you see? Are they related to one another?
+
+```{r}
+```
+
+OK, let's turn back to the measure and implement Sklar et al.'s exclusion criterion. You need to have said you couldn't see (subjective test) and also be not significantly above chance on the objective test (< .6 correct). Call your new data frame `ds`.
+
+```{r}
+```
+
+# Sklar et al.'s analysis
+
+Sklar et al. show a plot of a "facilitation effect" - the amount faster you are for prime-congruent naming compared with prime-incongruent naming. They then show plot this difference score for the subtraction condition and for the two prime times they tested. Try to reproduce this analysis. 
+
+HINT: first take averages within subjects, then compute your error bars across participants, using the `sem` function (defined above). 
+
+```{r}
+```
+
+Now plot this summary, giving more or less the bar plot that Sklar et al. gave (though I would keep operation as a variable here. Make sure you get some error bars on there (e.g. `geom_errorbar` or `geom_linerange`). 
+
+```{r}
+```
+
+What do you see here? How close is it to what Sklar et al. report? Do the error bars match? How do you interpret these data? 
+
+Challenge problem: verify Sklar et al.'s claim about the relationship between RT and the objective manipulation check.
+
+```{r}
+```
+
+# Your own analysis
+
+Show us what you would do with these data, operating from first principles. What's the fairest plot showing a test of Sklar et al.'s original hypothesis?
+
+```{r}
+```
+
+Challenge problem: Do you find any statistical support for Sklar et al.'s findings?
+
+```{r}
+```
+

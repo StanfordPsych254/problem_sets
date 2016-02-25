@@ -1,0 +1,37 @@
+---
+title: "My Replication Report"
+author: "Michael C. Frank"
+date: '`r Sys.Date()`'
+output:
+  pdf_document:
+    toc: yes
+  html_document:
+    number_sections: yes
+    toc: yes
+---
+
+<style type="text/css">
+body, td {
+   font-size: 14px;
+}
+code {
+  font-size: 11px;
+}
+pre {
+  font-size: 11px;
+}
+</style>
+
+```{r, echo = FALSE, include = FALSE}
+rm(list=ls())
+suppressPackageStartupMessages(c("dplyr","tidyr","ggplot2","lme4"))
+library(knitr)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(lme4)
+
+opts_chunk$set(fig.width=8, fig.height=5, 
+                      echo=TRUE, warning=FALSE, message=FALSE, cache=TRUE)
+theme_set(theme_bw())
+```

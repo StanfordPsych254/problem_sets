@@ -21,6 +21,7 @@ library(ggplot2)
 library(tidyr)
 library(dplyr)
 library(bootstrap)
+library(broom)
 
 theme_set(theme_bw())
 sem <- function(x) {sd(x, na.rm=TRUE) / sqrt(length(x))}
@@ -174,11 +175,62 @@ ggplot(ms, aes(x = age, y = mean, col = condition)) +
   geom_linerange(aes(ymin = mean - ci_lower, 
                      ymax = mean + ci_upper), 
                   position = position_dodge(width = .5)) + 
-  geom_point() +
+  geom_point(aes(size=n)) +
   facet_grid(trial_type ~ country) + 
-  geom_smooth(method="lm", se = FALSE, formula = y ~ I(x^2)) + 
+  geom_smooth(method="lm", se = FALSE, formula = y ~ I(x^2), aes(weight = 1/n)) + 
   ylab("Proportion offers rejected") +
   xlab("Age (years)") +
   ylim(c(0,1)) + 
   langcog::scale_colour_solarized()
+```
+
+I'm still not super happy with the curves. Can we add some model-derived fits?
+
+I'd like to be fitting an lmer model. Unfortunately it doesn't converge on country subsets.
+
+So, let's ignore the p values and SEs, which will be wrong, and fit regular GLM. (The coefficients should be very similar because the design is balanced). 
+
+```{r}
+mods <- d %>% 
+  group_by(country) %>%
+  do(predict(glm(decision == "reject" ~ condition * trial_type * actor.age.years,
+                data = ., 
+                family = "binomial"), 
+             newdata = data.frame(expand.grid(actor.age.years = 4:14, 
+                                    condition = c("Advantageous","Disadvantageous"), 
+                                    trial_type = c("Equal","Unequal")))))
+```
+
+Now plot these. This is not the *ideal* model, but it's way better than nothing. 
+
+```{r}
+nd <- expand.grid(actor.age.years = 4:14, 
+                                    condition = c("Advantageous","Disadvantageous"), 
+                                    trial_type = c("Equal","Unequal"))
+
+preds <- d %>%
+  group_by(country) %>%
+  do(data.frame(nd, 
+                preds = predict(glm(decision == "reject" ~ 
+                                      condition * trial_type * actor.age.years,
+                                    data = ., 
+                                    family = "binomial"), 
+                                newdata = nd, type = "response")))
+```                  
+
+Plot these and then put legends on the bottom. 
+
+```{r}
+ggplot(ms, aes(x = age, y = mean, col = condition)) + 
+  geom_linerange(aes(ymin = mean - ci_lower, 
+                     ymax = mean + ci_upper), 
+                  position = position_dodge(width = .5)) + 
+  geom_point(aes(size=n)) +
+  facet_grid(trial_type ~ country) + 
+  geom_line(data = preds, aes(x = actor.age.years, y = preds)) + 
+  ylab("Proportion offers rejected") +
+  xlab("Age (years)") +
+  ylim(c(0,1)) + 
+  langcog::scale_colour_solarized() + 
+  theme(legend.position = "bottom")
 ```

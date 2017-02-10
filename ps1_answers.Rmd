@@ -20,7 +20,8 @@ Preliminaries
 I pretty much always clear the workspace and load the same basic helper functions before starting an analysis.
 
 ```{r prelims}
-library(tidyverse)
+rm(list=ls())
+source("helper/useful.R")
 ```
 
 Note that I'm using a "relative" path (the "helper") rather than an absolute path (e.g. "/Users/mcfrank/code/projects/etc..."). The relative path means that someone else can run your code by changing to the right directory, while the absolute path will force someone else to make trivial changes every time they want to run it.
@@ -38,9 +39,26 @@ Fine, right? Why can't we go forward with the analysis?
 
 HINT: try computing some summary statistics for the different items. Also, are there any participants that did the task more than once?
 
+> ANSWER-START
+There is non-uniformity in the Input and Answer formats ("five hundred", an empty string, "5,012"). Additionally, two participants did the task more than once: A1VYX5VKZ0CTWU and A5IUO2T5MZQUZ.
+> ANSWER-END
 
 Fix the data file *programmatically*, i.e., write code that transforms the unclean data frame into a clean data frame.
 
+> ANSWER-START
+
+```{r}
+clean.price <- function(x) {
+  gsub("ehight", "8",
+       gsub("five hundred", "500",
+            gsub(",", "", as.character(x))))
+}
+
+d <- transform(d, Answer.dog_cost = clean.price(Answer.dog_cost),
+               Answer.plasma_cost = clean.price(Answer.plasma_cost),
+               Answer.sushi_cost = clean.price(Answer.sushi_cost))
+```
+> ANSWER-END
 
 Part 2: Making these data tidy
 ------------------------------
@@ -61,6 +79,12 @@ HINT: `?select` and the examples of helper functions will help you be efficient.
 d.tidy <- select(...)
 ```
 
+> ANSWER-START
+
+```{r select}
+d.tidy <- select(d, WorkerId, Input.condition, starts_with("Answer"))
+```
+> ANSWER-END
 
 Try renaming some variables using `rename`. A good naming scheme is:
 
@@ -74,6 +98,17 @@ Try using the `%>%` operator as well. So you will be "piping" `d %>% rename(...)
 d.tidy <- ...
 ```
 
+> ANSWER-START
+
+```{r rename}
+d.tidy <- d.tidy %>%
+  rename(workerid = WorkerId,
+         condition = Input.condition,
+         dog = Answer.dog_cost,
+         plasma = Answer.plasma_cost,
+         sushi = Answer.sushi_cost)
+```
+> ANSWER-END
 
 OK, now for the tricky part. Use the verb *gather* to turn this into a *tidy* data frame.
 
@@ -83,6 +118,13 @@ HINT: look for online examples!
 d.tidy <- ...
 ```
 
+> ANSWER-START
+
+```{r gather}
+d.tidy <- d.tidy %>%
+  gather(item, bet, dog, plasma, sushi)
+```
+> ANSWER-END
 
 Bonus problem: *spread* these data back into a wide format data frame.
 
@@ -90,6 +132,13 @@ Bonus problem: *spread* these data back into a wide format data frame.
 d.wide <- ...
 ```
 
+> ANSWER-START
+
+```{r spread}
+d.wide <- d.tidy %>%
+  spread(item, bet)
+```
+> ANSWER-END
 
 Part 3: Manipulating the data using dplyr
 -----------------------------------------
@@ -102,14 +151,27 @@ As we said in class, a good thing to do is always to check histograms of the res
 ...
 ```
 
+> ANSWER-START
+
+```{r}
+qplot(cost, data=d.tidy)  + 
+  facet_grid(. ~ item, scales="free_x") 
+```
+> ANSWER-END
 
 Try also using the dplyr `distinct` function to remove the duplicate participants from the raw csv file that you discovered in part 1.
 
 ```{r}
-d.raw <- read.csv("../data/janiszewski_rep_exercise.csv")
+d.raw <- read.csv("data/janiszewski_rep_exercise.csv")
 d.unique.subs <- ...
 ```
 
+> ANSWER-START
+
+```{r}
+d.unique.subs <- distinct(d.raw, WorkerID)
+```
+> ANSWER-END
 
 OK, now we turn to the actual data anlysis. We'll be using dplyr verbs to *filter*, *group*,*mutate*, and *summarise* the data.
 
@@ -119,27 +181,32 @@ Start by using *summarise* to compute the grand mean bet. (Note that this is the
 ...
 ```
 
+> ANSWER-START
+
+```{r}
+d.tidy %>% summarise(bet = mean(bet, na.rm=TRUE))
+```
+> ANSWER-END
 
 This is a great time to get comfortable with the %>% operator. In brief, %>% allows you to pipe data from one function to another. So if you would have written:
 
 `d <- function(d, other_stuff)`
-
 you can now write:
 
 `d <- d %>% function(other_stufF)`
 
 That doesn't seem like much, but it's cool when you can replace:
 
-`d <- function1(d, other_stuff)
-d <- function2(d, lots_of_other_stuff, more_stuff)
-d <- function3(d, yet_more_stuff)`
+`d <- function1(d, other_stuff)`
+`d <- function2(d, lots_of_other_stuff, more_stuff)`
+`d <- function3(d, yet_more_stuff)`
 
 with
 
-`d <- d %>% 
-  function1(other_stuff) %>%
-  function2(lots_of_other_stuff, more_stuff) %>%
-  function3(yet_more_stuff)`
+`d <- d %>%` 
+`function1(other_stuff) %>%`
+`function2(lots_of_other_stuff, more_stuff) %>%`
+`function3(yet_more_stuff)`
 
 In other words, you get to make a clean list of the things you want to do and chain them together without a lot of intermediate assignments. 
 
@@ -149,6 +216,14 @@ Let's use that capacity to combine summarise with *group_by*, which allows us to
 ...
 ```
 
+> ANSWER-START
+
+```{r}
+d.tidy %>% 
+  group_by(item, condition) %>%
+  summarise(bet = mean(bet, na.rm=TRUE))
+```
+> ANSWER-END
 
 
 OK, it's looking like there are maybe some differences between conditions, but how are we going to plot these? They are fundamentally different magnitudes from one another. 
@@ -158,14 +233,14 @@ Really we need the size of the deviation from the anchor, which means we need th
 Take a look at this complex expression. You don't have to modify it, but see what is being done here with gather, separate and spread. Run each part (e.g. the first verb, the first two verbs, etc.) and after doing each, look at head(d.tidy) to see what they do.  
 
 ```{r}
-d.tidy <- d %>% 
+d.tidy <- d.raw %>% 
   select(WorkerId, Input.condition, 
          starts_with("Answer"), 
          starts_with("Input")) %>%
   rename(workerid = WorkerId,
          condition = Input.condition,          
-         plasma_anchor = Input.price1,
-         dog_anchor = Input.price2,
+         dog_anchor = Input.price1,
+         plasma_anchor = Input.price2,
          sushi_anchor = Input.price3,
          dog_cost = Answer.dog_cost,
          plasma_cost = Answer.plasma_cost, 
@@ -190,6 +265,15 @@ pcts <- d.tidy %>%
   ...
 ```
 
+> ANSWER-START
+
+```{r}
+pcts <- d.tidy %>% 
+  mutate(pct_change = abs((anchor - cost) / anchor)) %>%
+  group_by(item, condition) %>%
+  summarise(pct = mean(pct_change, na.rm=TRUE))
+```
+> ANSWER-END
 
 To do the second, you will need to *group* once by item, then to *ungroup* and  do the same thing as before. NOTE: you can use group_by(..., add=FALSE) to set new grouping levels, also. 
 
@@ -201,6 +285,16 @@ pcts <- d.tidy %>%
   ...
 ```
 
+> ANSWER-START
+
+```{r}
+z.scores <- d.tidy %>% 
+  group_by(item) %>%
+  mutate(z = scale(anchor - cost)[,1]) %>%
+  group_by(item, condition, add=FALSE) %>%
+  summarise(z = mean(z, na.rm=TRUE))
+```
+> ANSWER-END
 
 OK, now here comes the end: we're going to plot the differences and see if anything happened. First the percent change:
 

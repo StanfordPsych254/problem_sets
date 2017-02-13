@@ -1,45 +1,68 @@
 ---
-title: "R Notebook"
+title: "R Notebook - simple dplyr/ggplot workflow "
 output: html_notebook
 ---
+
+# Preliminaries
+
+Load the tidyverse. 
 
 ```{r}
 library(tidyverse)
 ```
 
+Load the data from Stiller, Goodman, & Frank (2015).
+
 ```{r}
 d <- read_csv("http://langcog.stanford.edu/scales_data.csv")
 ```
-```{r}
-d
-```
+
+Inspect the various variables.
 
 ```{r}
 unique(d$condition)
 unique(d$age.group)
 length(unique(d$subid))
 ```
+
+# Sanity Checks
+
+Histogram of ages.
+
 ```{r}
 ggplot(d, aes(x = age)) + 
   geom_histogram(binwidth=.25)
 ```
+
+Check N observations.
 
 ```{r}
 d %>%
   group_by(condition, age.group) %>%
   summarise(n_observations = n()) 
 ```
+
+Check N subs.
+
 ```{r}
 d %>%
   distinct(subid, condition, age.group) %>%
   group_by(condition, age.group) %>%
   summarise(n_subs = n())
 ```
+
+# Plots
+
+First global plot, not that informative but better than nothing. Illustrates the power of geom_smooth.
+
 ```{r}
 ggplot(d, aes(x = age, y = correct, col = condition)) + 
   geom_point() + 
   geom_smooth(method="glm") 
 ```
+
+Next, use subject means.
+
 ```{r}
 sub_means <- d %>%
   group_by(condition, age, subid) %>%
@@ -49,9 +72,9 @@ ggplot(sub_means,
        aes(x = age, y = correct, col = condition)) + 
   geom_point() + 
   geom_smooth()
-
 ```
 
+And condition-by-subject means. 
 
 ```{r}
 cond_means <- d %>%
@@ -65,10 +88,9 @@ ggplot(cond_means,
   geom_line() + 
   ylim(c(0,1)) + 
   ggthemes::theme_few() + 
-  # langcog::scale_colour_solarized() + 
+  ggthemes::scale_colour_solarized() + 
   ylab("Proportion Inferences Correct") + 
   xlab("Age (Years)")
-
 ```
 
 
@@ -78,9 +100,8 @@ ggplot(cond_means,
   geom_bar(stat = "identity", position = "dodge") + 
   ylim(c(0,1)) + 
   ggthemes::theme_few() + 
-  # langcog::scale_colour_solarized() + 
+  ggthemes::scale_fill_solarized() + 
   ylab("Proportion Inferences Correct") + 
   xlab("Age (Years)")
-
 ```
 

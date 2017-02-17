@@ -1,7 +1,7 @@
 ---
 title: 'Psych 254 W15 PS #1'
 author: "Mike Frank"
-date: "January 11, 2015"
+date: "February 16, 2017"
 output: html_document
 ---
 
@@ -22,6 +22,8 @@ I pretty much always clear the workspace and load the same basic helper function
 ```{r prelims}
 rm(list=ls())
 source("helper/useful.R")
+library(stringr)
+library(readr)
 ```
 
 Note that I'm using a "relative" path (the "helper") rather than an absolute path (e.g. "/Users/mcfrank/code/projects/etc..."). The relative path means that someone else can run your code by changing to the right directory, while the absolute path will force someone else to make trivial changes every time they want to run it.
@@ -40,7 +42,7 @@ Fine, right? Why can't we go forward with the analysis?
 HINT: try computing some summary statistics for the different items. Also, are there any participants that did the task more than once?
 
 > ANSWER-START
-There is non-uniformity in the Input and Answer formats ("five hundred", an empty string, "5,012"). Additionally, two participants did the task more than once: A1VYX5VKZ0CTWU and A5IUO2T5MZQUZ.
+There is non-uniformity in the Input and Answer formats ("five hundred", an empty string, "5,012", "7,75"). Additionally, two participants did the task more than once: A1VYX5VKZ0CTWU and A5IUO2T5MZQUZ.
 > ANSWER-END
 
 Fix the data file *programmatically*, i.e., write code that transforms the unclean data frame into a clean data frame.
@@ -48,15 +50,20 @@ Fix the data file *programmatically*, i.e., write code that transforms the uncle
 > ANSWER-START
 
 ```{r}
-clean.price <- function(x) {
-  gsub("ehight", "8",
-       gsub("five hundred", "500",
-            gsub(",", "", as.character(x))))
-}
+d <- read_csv("data/janiszewski_rep_exercise.csv", na = c("", "NA"))
 
-d <- transform(d, Answer.dog_cost = clean.price(Answer.dog_cost),
-               Answer.plasma_cost = clean.price(Answer.plasma_cost),
-               Answer.sushi_cost = clean.price(Answer.sushi_cost))
+summary(as.factor(d$Answer.sushi_cost)) # a shortcut to see unique values
+summary(as.factor(d$Answer.dog_cost)) 
+summary(as.factor(d$Answer.plasma_cost)) 
+
+d$Answer.sushi_cost <- str_replace_all(d$Answer.sushi_cost, "ehight", "8")
+d$Answer.sushi_cost <- as.numeric(str_replace_all(d$Answer.sushi_cost, ",", "."))
+
+d$Answer.dog_cost <- str_replace_all(d$Answer.dog_cost, "five hundred", "500")
+d$Answer.dog_cost <- as.numeric(str_replace_all(d$Answer.dog_cost, ",", ""))
+
+d$Answer.plasma_cost <- as.numeric(d$Answer.plasma_cost)
+
 ```
 > ANSWER-END
 
@@ -103,10 +110,11 @@ d.tidy <- ...
 ```{r rename}
 d.tidy <- d.tidy %>%
   rename(workerid = WorkerId,
-         condition = Input.condition,
+         condition = Input.condition,          
          dog = Answer.dog_cost,
-         plasma = Answer.plasma_cost,
+         plasma = Answer.plasma_cost, 
          sushi = Answer.sushi_cost)
+
 ```
 > ANSWER-END
 
@@ -154,8 +162,9 @@ As we said in class, a good thing to do is always to check histograms of the res
 > ANSWER-START
 
 ```{r}
-qplot(cost, data=d.tidy)  + 
-  facet_grid(. ~ item, scales="free_x") 
+ggplot(d.tidy, aes(x=bet))  + 
+  geom_histogram() +
+  facet_grid(. ~ item)
 ```
 > ANSWER-END
 
@@ -169,7 +178,7 @@ d.unique.subs <- ...
 > ANSWER-START
 
 ```{r}
-d.unique.subs <- distinct(d.raw, WorkerID)
+d.unique.subs <- distinct(d.raw, WorkerId)
 ```
 > ANSWER-END
 
@@ -233,7 +242,7 @@ Really we need the size of the deviation from the anchor, which means we need th
 Take a look at this complex expression. You don't have to modify it, but see what is being done here with gather, separate and spread. Run each part (e.g. the first verb, the first two verbs, etc.) and after doing each, look at head(d.tidy) to see what they do.  
 
 ```{r}
-d.tidy <- d.raw %>% 
+d.tidy <- d %>% 
   select(WorkerId, Input.condition, 
          starts_with("Answer"), 
          starts_with("Input")) %>%
@@ -299,19 +308,15 @@ z.scores <- d.tidy %>%
 OK, now here comes the end: we're going to plot the differences and see if anything happened. First the percent change:
 
 ```{r}
-qplot(item, pct, fill=condition, 
-      position="dodge",
-      stat="identity", geom="bar", 
-      data=pcts)  
+ggplot(pcts, aes(x=item, y=pct, fill=condition)) + 
+      geom_bar(stat="identity", position="dodge")  
 ```
 
 and the z-scores:
 
 ```{r}
-qplot(item, z, fill=condition, 
-      position="dodge",
-      stat="identity", geom="bar", 
-      data=z.scores)  
+ggplot(z.scores, aes(x=item, y=z, fill=condition)) + 
+      geom_bar(position="dodge", stat="identity")  
 ```
 
 Oh well. This replication didn't seem to work out straightforwardly. 
